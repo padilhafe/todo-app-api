@@ -2,22 +2,26 @@ from datetime import timedelta, datetime, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, status, HTTPException
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
-from jose import jwt
+from jose import jwt, JWTError
 
 from models import Users
 from database import SessionLocal
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/auth",
+    tags=["Authentication"],
+)
 
 SECRET_KEY = "gBqnWHO2oKqTsqCngbsQKxgrSKMKY9ru"
 ALGORITHM = "HS256"
 
 BCryptContext = CryptContext(schemes=["bcrypt"], deprecated="auto")
+OAuth2Bearer = OAuth2PasswordBearer(tokenUrl='auth/token') 
 
 class CreateUserRequest(BaseModel):
     email: str
@@ -54,7 +58,25 @@ def create_access_token(username: str, user_id: int, expires_delta: timedelta):
     encode.update({"exp": expires})
     return jwt.encode(encode, SECRET_KEY, algorithm=ALGORITHM)
 
-@router.post("/auth", status_code=status.HTTP_201_CREATED)
+async def get_current_user(token: Annotated[str, Depends(OAuth2Bearer)]):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        user_id: int = payload.get("user_id")
+        if username is None or user_id is None:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                                detail="Could not validate credentials.")
+        return {
+            "username": username,
+            "user_id": user_id
+        }
+        
+    except JWTError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Could not validate credentials.") from exc
+        
+
+@router.post("", status_code=status.HTTP_201_CREATED)
 async def create_user(db: DbDependency, create_user_request: CreateUserRequest):
     create_user_model = Users(
         email=create_user_request.email,

@@ -4,8 +4,12 @@ from pydantic import BaseModel, Field
 from database import SessionLocal
 from typing import Annotated
 from models import Todos
+from .auth import get_current_user
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/todos",
+    tags=["Todos"]
+)
 
 def get_db():
     db = SessionLocal()
@@ -15,6 +19,7 @@ def get_db():
         db.close()
 
 DbDependency = Annotated[Session, Depends(get_db)]
+UserDependency = Annotated[dict, Depends(get_current_user)]
 
 class TodoRequest(BaseModel):
     title: str = Field(min_length=3, max_length=64)
@@ -22,29 +27,59 @@ class TodoRequest(BaseModel):
     priority: int = Field(ge=1, le=5)
     complete: bool = False
 
-@router.get("/todos", status_code=status.HTTP_200_OK)
-async def read_all(db: DbDependency):
-    return db.query(Todos).all()
+@router.get("", status_code=status.HTTP_200_OK)
+async def read_all(user: UserDependency,
+                   db: DbDependency):
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+    
+    return db.query(Todos).filter(Todos.owner_id == user.get("user_id")).all()
 
-@router.get("/todos/{id}", status_code=status.HTTP_200_OK)
-async def read_todo(id: int, db: DbDependency):
-    todo_model = db.query(Todos).filter(Todos.id == id).first()
+@router.get("/{id}", status_code=status.HTTP_200_OK)
+async def read_todo(user: UserDependency, 
+                    id: int, 
+                    db: DbDependency):
+    
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+    
+    todo_model = db.query(Todos)\
+            .filter(Todos.id == id)\
+            .filter(Todos.owner_id == user.get("user_id"))\
+            .first()
+            
     if todo_model is not None:
         return todo_model
+    
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Todo not found")
 
-@router.post("/todos", status_code=status.HTTP_201_CREATED)
-async def create_todo(todo_request: TodoRequest, db: DbDependency):
-    todo_model = Todos(**todo_request.model_dump())
+@router.post("", status_code=status.HTTP_201_CREATED)
+async def create_todo(user: UserDependency, 
+                      todo_request: TodoRequest, 
+                      db: DbDependency):
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+    
+    todo_model = Todos(**todo_request.model_dump(), owner_id=user.get("user_id"))
 
     db.add(todo_model)
     db.commit()
     
-@router.put("/todos/{id}", status_code=status.HTTP_204_NO_CONTENT)
-async def update_todo(db: DbDependency,
+@router.put("/{id}", status_code=status.HTTP_204_NO_CONTENT)
+async def update_todo(user: UserDependency,
+                      db: DbDependency,
                       todo_request: TodoRequest,
                       id: int = Path(gt=0)):
-    todo_model = db.query(Todos).filter(Todos.id == id).first()
+    
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+    
+    
+    todo_model = db.query(Todos)\
+        .filter(Todos.id == id)\
+            .filter(Todos.owner_id == user.get("user_id"))\
+            .first()
+            
     if todo_model is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Todo not found")
     
@@ -56,9 +91,19 @@ async def update_todo(db: DbDependency,
     db.add(todo_model)
     db.commit()
     
-@router.delete("/todos/{id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_todo(db: DbDependency, id: int = Path(gt=0)):
-    todo_model = db.query(Todos).filter(Todos.id == id).first()
+@router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_todo(user: UserDependency, 
+                      db: DbDependency, 
+                      id: int = Path(gt=0)):
+    
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+    
+    
+    todo_model = db.query(Todos)\
+        .filter(Todos.id == id)\
+            .filter(Todos.owner_id == user.get("user_id"))\
+            .first()
     if todo_model is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Todo not found")
     
