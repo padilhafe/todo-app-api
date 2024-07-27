@@ -5,10 +5,13 @@ from sqlalchemy.orm import Session
 from typing import Annotated
 import models
 from models import Todos
+from routers import auth
 
 app = FastAPI()
 
 models.Base.metadata.create_all(bind=engine)
+
+app.include_router(auth.router)
 
 def get_db():
     db = SessionLocal()
