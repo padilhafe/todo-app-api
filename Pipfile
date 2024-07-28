@@ -11,6 +11,8 @@ passlib = "*"
 bcrypt = "==4.0.1"
 python-multipart = "*"
 python-jose = "*"
+pymysql = "*"
+alembic = "*"
 
 [dev-packages]
 
