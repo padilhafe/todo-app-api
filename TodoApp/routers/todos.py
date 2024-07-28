@@ -32,7 +32,6 @@ async def read_all(user: UserDependency,
                    db: DbDependency):
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
-    
     return db.query(Todos).filter(Todos.owner_id == user.get("user_id")).all()
 
 @router.get("/{id}", status_code=status.HTTP_200_OK)
