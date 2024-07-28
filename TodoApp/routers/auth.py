@@ -9,8 +9,8 @@ from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from jose import jwt, JWTError
 
-from models import Users
-from database import SessionLocal
+from TodoApp.models import Users
+from TodoApp.database import SessionLocal
 
 router = APIRouter(
     prefix="/auth",

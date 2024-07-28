@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, Path, status, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
-from database import SessionLocal
 from typing import Annotated
-from models import Todos
 from .auth import get_current_user
+from TodoApp.models import Todos
+from TodoApp.database import SessionLocal
 
 router = APIRouter(
     prefix="/todos",

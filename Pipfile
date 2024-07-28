@@ -13,6 +13,9 @@ python-multipart = "*"
 python-jose = "*"
 pymysql = "*"
 alembic = "*"
+pytest = "*"
+httpx = "*"
+cryptography = "*"
 
 [dev-packages]
 
