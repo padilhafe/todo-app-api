@@ -15,6 +15,7 @@ router = APIRouter(
 class UserVerification(BaseModel):
     password: str
     new_password: str = Field(min_length=8)
+    phone_number: str = Field(min_length=11, max_length=11)
 
 def get_db():
     db = SessionLocal()
@@ -36,7 +37,7 @@ async def get_user(user: UserDependency,
     return db.query(Users).filter(Users.id == user.get("user_id")).first()
 
 @router.put("/me", status_code=status.HTTP_204_NO_CONTENT)
-async def change_password(user: UserDependency,
+async def update_user(user: UserDependency,
                           db: DbDependency,
                           user_verification: UserVerification):
     if user is None:
@@ -48,6 +49,7 @@ async def change_password(user: UserDependency,
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Error on password change")
     
     user_model.hashed_password = BCryptContext.hash(user_verification.new_password)
+    user_model.phone_number = user_verification.phone_number
     
     db.add(user_model)
     db.commit()

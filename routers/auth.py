@@ -30,6 +30,7 @@ class CreateUserRequest(BaseModel):
     last_name: str
     password: str = Field(min_length=8)
     role: str
+    phone_number: str = Field(min_length=11, nullable=True)
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -87,7 +88,8 @@ async def create_user(db: DbDependency, create_user_request: CreateUserRequest):
         last_name=create_user_request.last_name,
         hashed_password=BCryptContext.hash(create_user_request.password),
         role=create_user_request.role,
-        is_active=True
+        is_active=True,
+        phone_number = create_user_request.phone_number,
     )
 
     db.add(create_user_model)
