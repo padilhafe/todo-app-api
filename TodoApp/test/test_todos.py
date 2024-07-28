@@ -40,7 +40,7 @@ app.dependency_overrides[get_current_user] = overrride_get_current_user
 
 client = TestClient(app)
 
-@pytest.fixture(autouse=True)
+@pytest.fixture()
 def test_todo():
     todo = Todos(
         title="Test Todo",
@@ -60,7 +60,7 @@ def test_todo():
         connection.execute(text("DELETE FROM todos;"))
         connection.commit()
 
-def test_read_all_authenticated():
+def test_read_all_authenticated(test_todo):
     response = client.get("/todos")
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == [{
@@ -71,3 +71,21 @@ def test_read_all_authenticated():
                                 'id': 1, 
                                 'owner_id': 1
                             }]
+
+def test_read_one_authenticated(test_todo):
+    response = client.get("/todos/1")
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {
+                                'title': 'Test Todo', 
+                                'description': 'Test todo description', 
+                                'complete': False, 
+                                'priority': 5, 
+                                'id': 1, 
+                                'owner_id': 1
+                            }
+
+def test_read_one_unauthenticated_not_found(test_todo):
+    response = client.get("/todos/999")
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json() == {"detail": "Todo not found"}
+
