@@ -1,0 +1,14 @@
+volumes:
+  todos_database:
+
+services:
+  database:
+    image: mysql:latest
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: todo_user
+      MYSQL_PASSWORD: todo_password
+      MYSQL_DATABASE: todos
+    ports:
+      - "3306:3306"
